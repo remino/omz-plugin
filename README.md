@@ -15,8 +15,9 @@ Rémino Rem <https://remino.net/>, 2026
 
 ## Usage
 
-Multiple Oh My Zsh plugins are in this repository. To use them, first clone the
-repo in a special area to link them later:
+Multiple Oh My Zsh plugins are in this repository. (For technical reasons, some
+could only be added as submodules.) To use them, first clone the repo in a
+special area to link them later:
 
 ### Clone the repo
 
