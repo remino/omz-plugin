@@ -12,10 +12,10 @@ cd remino-omz-plugin
 git worktree add "${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins/rg" rg/main
 ```
 
-Second, add `template` to your Oh My Zsh plugins:
+Second, add `rg` to your Oh My Zsh plugins:
 
 ```
-plugins+=(template)
+plugins+=(rg)
 ```
 
 Last, restart your shell.
