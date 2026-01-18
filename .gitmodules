@@ -1,0 +1,4 @@
+[submodule "plugins/yt-dlp"]
+	path = plugins/yt-dlp
+	url = https://github.com/remino/omz-plugin-yt-dlp
+	branch = remino
