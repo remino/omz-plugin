@@ -174,7 +174,7 @@ migrate_tags_for_plugin_branch() {
     esac
 
     local dst
-    dst="$plugin/$t"
+    dst="$t"
 
     if tag_exists "$dst"; then
       continue
