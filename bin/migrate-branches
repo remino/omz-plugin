@@ -1,0 +1,228 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# ------------------------------------------------------------
+# monorepo plugin-branch -> main/subdir migrator (same repo)
+#
+# Layout assumption:
+#   - main branch: main
+#   - plugin branches: <plugin>/main   (e.g. plugin-a/main)
+#
+# Actions:
+#   - subtree-add each <plugin>/main into plugins/<plugin> on main (NO squash)
+#   - migrate tags that belong to that plugin branch:
+#       v1.2.3  -> plugin-a/v1.2.3
+#
+# Usage:
+#   ./migrate.sh /path/to/repo
+#   ./migrate.sh .               # repo root
+# ------------------------------------------------------------
+
+E_USAGE=2
+E_NOT_GIT_ROOT=10
+E_CD_FAILED=11
+
+log() { printf '%s\n' "$*" >&2; }
+die() { log "error: $*"; exit 1; }
+
+usage() {
+  cat >&2 <<'EOF'
+Usage:
+  migrate.sh /path/to/repo
+
+Assumptions:
+  - You are using branches like:
+      main
+      plugin-a/main
+      plugin-b/main
+  - You want everything merged into:
+      plugins/plugin-a/
+      plugins/plugin-b/
+
+What it does:
+  - Checks repo root
+  - Checks out main
+  - For each <plugin>/main branch:
+      * git subtree add into plugins/<plugin> (no squash)
+      * creates prefixed tags plugin/<tag> for tags reachable from that branch
+
+After:
+  git push origin main
+  git push origin --tags
+EOF
+  exit $E_USAGE
+}
+
+need_cmd() {
+  command -v "$1" >/dev/null 2>&1 || die "missing required command: $1"
+}
+
+assert_git_repo_root() {
+  local root="${1:-}"
+  [ -n "$root" ] || usage
+  [ -d "$root" ] || die "not a directory: $root"
+  [ -d "$root/.git" ] || die "not a git repo root (no .git dir): $root"
+}
+
+cd_repo() {
+  cd "$1" || exit $E_CD_FAILED
+}
+
+ensure_on_main() {
+  git rev-parse --verify main >/dev/null 2>&1 || die "no 'main' branch found"
+  git checkout main >/dev/null 2>&1 || die "failed to checkout main"
+}
+
+# --- branch discovery --------------------------------------------------------
+
+is_plugin_main_branch_name() {
+  local b="$1"
+  [[ "$b" == */main && "$b" != "main" ]]
+}
+
+list_plugin_main_branches() {
+  # local branches only; change to -a if you want remote ones too
+  git for-each-ref --format='%(refname:short)' refs/heads \
+    | while IFS= read -r b; do
+        is_plugin_main_branch_name "$b" || continue
+        printf '%s\n' "$b"
+      done
+}
+
+plugin_name_from_branch() {
+  # "plugin-a/main" -> "plugin-a"
+  local b="$1"
+  printf '%s\n' "${b%/main}"
+}
+
+plugin_prefix_dir() {
+  local plugin="$1"
+  printf '%s\n' "plugins/$plugin"
+}
+
+path_exists() {
+  [ -e "$1" ]
+}
+
+subtree_add_plugin() {
+  local plugin="$1"
+  local branch="$2"
+
+  local prefix
+  prefix="$(plugin_prefix_dir "$plugin")"
+
+  if path_exists "$prefix"; then
+    log "    subtree exists, skipping: $prefix"
+    return 0
+  fi
+
+  # This preserves commit IDs (no --squash)
+  git subtree add --prefix="$prefix" "$branch"
+}
+
+# --- tag migration -----------------------------------------------------------
+
+tag_exists() {
+  local tag="$1"
+  git show-ref --tags --verify --quiet "refs/tags/$tag"
+}
+
+tag_points_to_commitish() {
+  # prints a commit-ish for a tag (peels annotated tags)
+  local tag="$1"
+  git rev-parse "$tag^{commit}" 2>/dev/null || git rev-parse "$tag"
+}
+
+tag_is_reachable_from_branch() {
+  # True if tag's commit is an ancestor of the branch
+  local tag="$1"
+  local branch="$2"
+
+  local target
+  target="$(tag_points_to_commitish "$tag")"
+
+  git merge-base --is-ancestor "$target" "$branch" 2>/dev/null
+}
+
+create_prefixed_tag() {
+  local new_tag="$1"
+  local old_tag="$2"
+
+  local target
+  target="$(tag_points_to_commitish "$old_tag")"
+
+  # Annotated tag so it’s obvious it’s a migrated monorepo tag
+  git tag -a "$new_tag" "$target" -m "$new_tag"
+}
+
+migrate_tags_for_plugin_branch() {
+  local plugin="$1"
+  local branch="$2"
+
+  # This iterates ALL tags in the repo and prefixes the ones reachable
+  # from this plugin branch.
+  #
+  # If you have overlapping history between plugins, tags could be reachable
+  # from multiple branches -> you'll get multiple prefixed copies, which is
+  # usually fine (and sometimes desirable).
+  while IFS= read -r t; do
+    [ -n "$t" ] || continue
+
+    # Skip already-prefixed tags (avoid infinite growth)
+    case "$t" in
+      "$plugin/"*) continue ;;
+    esac
+
+    local dst
+    dst="$plugin/$t"
+
+    if tag_exists "$dst"; then
+      continue
+    fi
+
+    if tag_is_reachable_from_branch "$t" "$branch"; then
+      create_prefixed_tag "$dst" "$t"
+      log "    tagged: $dst"
+    fi
+  done < <(git tag -l)
+}
+
+# --- per-plugin migration ----------------------------------------------------
+
+migrate_one_plugin_branch() {
+  local branch="$1"
+  local plugin
+  plugin="$(plugin_name_from_branch "$branch")"
+
+  log "==> migrating: $plugin"
+  log "    branch: $branch"
+
+  subtree_add_plugin "$plugin" "$branch"
+  migrate_tags_for_plugin_branch "$plugin" "$branch"
+
+  log ""
+}
+
+# --- entrypoint --------------------------------------------------------------
+
+main() {
+  local repo_root="${1:-}"
+  need_cmd git
+  assert_git_repo_root "$repo_root"
+  cd_repo "$repo_root"
+  ensure_on_main
+
+  local count=0
+  while IFS= read -r b; do
+    [ -n "$b" ] || continue
+    migrate_one_plugin_branch "$b"
+    count=$((count + 1))
+  done < <(list_plugin_main_branches)
+
+  log "Done. Migrated $count plugin branch(es)."
+  log "Next:"
+  log "  git push origin main"
+  log "  git push origin --tags"
+}
+
+main "$@"
