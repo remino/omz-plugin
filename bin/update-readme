@@ -6,17 +6,34 @@ update_readme_main() {
 	E_ARGS=16
 	E_CD_FAILED=17
 	E_NOT_GIT=18
+	E_MISSING_FILE=19
+
+	[ $# -lt 1 ] && echo "USAGE: update_readme_main <dir>" && return
+
+	repo_dir="$1"
+
+	[ ! -d "$repo_dir" ] && echo "Not a directory or not found: $repo_dir" >&2 && return $E_MISSING_FILE
+
+	cd "$repo_dir" >/dev/null 2>&1 || (echo "Cannot change directory: $repo_dir" >&2 && return $E_CD_FAILED)
 
 	[ ! -e .git ] && echo "Not top of git worktree." >&2 && return $E_NOT_GIT
 
-	rm -fr .* *
+	find . -maxdepth 1 -not -name '.git' -not -name '.' -not -name '..' -exec rm -rf {} \;
 
-	repo_name="$(dirname "$PWD")"
+	repo_name="$(basename "$PWD")"
 	plugin_name="${repo_name#omz-plugin-}"
 
-	echo "# $plugin_name\n\nMigrated as $($plugin_name/*) branches in [_omz-plugin_](https://github.com/remino/omz-plugin/tree/$plugin_name)." >README.md
+	cat <<OUT >README.md
+# $plugin_name
 
-	git commit -a -m "Migrate to omz-plugin repo:\n\nhttps://github.com/remino/omz-plugin/tree/$plugin_name"
+Migrated as \`$plugin_name/*\` branches in [_omz-plugin_](https://github.com/remino/omz-plugin/tree/$plugin_name/main)
+OUT
+
+	cat <<OUT | git commit -a -F -
+Migrate to omz-plugin repo:
+
+https://github.com/remino/omz-plugin/tree/$plugin_name/main
+OUT
 }
 
 update_readme_main "$@"
