@@ -7,15 +7,17 @@ set -euo pipefail
 # Layout assumption:
 #   - main branch: main
 #   - plugin branches: <plugin>/main   (e.g. plugin-a/main)
+#   - tags already prefixed: <plugin>/vX.Y.Z  (e.g. plugin-a/v0.1.0)
 #
 # Actions:
 #   - subtree-add each <plugin>/main into plugins/<plugin> on main (NO squash)
-#   - migrate tags that belong to that plugin branch:
-#       v1.2.3  -> plugin-a/v1.2.3
+#   - retarget existing prefixed tags <plugin>/* to commits on main:
+#       plugin-a/v1.2.0 moves to the first main-commit that contains
+#       the commit it previously pointed at.
 #
 # Usage:
 #   ./migrate.sh /path/to/repo
-#   ./migrate.sh .               # repo root
+#   ./migrate.sh .
 # ------------------------------------------------------------
 
 E_USAGE=2
@@ -34,24 +36,26 @@ Usage:
   migrate.sh /path/to/repo
 
 Assumptions:
-  - You are using branches like:
+  - Branches:
       main
       plugin-a/main
       plugin-b/main
-  - You want everything merged into:
-      plugins/plugin-a/
-      plugins/plugin-b/
+  - Tags already exist and are prefixed:
+      plugin-a/v0.1.0
+      plugin-a/v0.2.0
+      plugin-b/v1.0.0
 
 What it does:
   - Checks repo root
   - Checks out main
   - For each <plugin>/main branch:
       * git subtree add into plugins/<plugin> (no squash)
-      * creates prefixed tags plugin/<tag> for tags reachable from that branch
+      * force-moves tags plugin/<tag> so they point at the first commit on main
+        that contains the commit they currently point to.
 
 After:
   git push origin main
-  git push origin --tags
+  git push --force origin --tags   (or push per-plugin tags)
 EOF
 	exit $E_USAGE
 }
@@ -84,7 +88,6 @@ is_plugin_main_branch_name() {
 }
 
 list_plugin_main_branches() {
-	# local branches only; change to -a if you want remote ones too
 	git for-each-ref --format='%(refname:short)' refs/heads |
 		while IFS= read -r b; do
 			is_plugin_main_branch_name "$b" || continue
@@ -93,7 +96,6 @@ list_plugin_main_branches() {
 }
 
 plugin_name_from_branch() {
-	# "plugin-a/main" -> "plugin-a"
 	local b="$1"
 	printf '%s\n' "${b%/main}"
 }
@@ -119,75 +121,91 @@ subtree_add_plugin() {
 		return 0
 	fi
 
-	# This preserves commit IDs (no --squash)
 	git subtree add --prefix="$prefix" "$branch"
 }
 
-# --- tag migration -----------------------------------------------------------
+# --- tag retargeting ---------------------------------------------------------
 
-tag_exists() {
+tag_commit() {
+	# Peel annotated tags -> commit
 	local tag="$1"
-	git show-ref --tags --verify --quiet "refs/tags/$tag"
+	git rev-parse "$tag^{commit}"
 }
 
-tag_points_to_commitish() {
-	# prints a commit-ish for a tag (peels annotated tags)
-	local tag="$1"
-	git rev-parse "$tag^{commit}" 2>/dev/null || git rev-parse "$tag"
-}
-
-tag_is_reachable_from_branch() {
-	# True if tag's commit is an ancestor of the branch
-	local tag="$1"
-	local branch="$2"
-
-	local target
-	target="$(tag_points_to_commitish "$tag")"
-
-	git merge-base --is-ancestor "$target" "$branch" 2>/dev/null
-}
-
-create_prefixed_tag() {
-	local new_tag="$1"
-	local old_tag="$2"
-
-	local target
-	target="$(tag_points_to_commitish "$old_tag")"
-
-	# Annotated tag so it’s obvious it’s a migrated monorepo tag
-	git tag -a "$new_tag" "$target" -m "$new_tag"
-}
-
-migrate_tags_for_plugin_branch() {
+list_prefixed_tags_for_plugin() {
 	local plugin="$1"
-	local branch="$2"
+	git tag -l "$plugin/*"
+}
 
-	# This iterates ALL tags in the repo and prefixes the ones reachable
-	# from this plugin branch.
+first_main_commit_that_contains() {
+	# Given a commit C, find the first commit on main that "introduces"
+	# that commit into main's history (e.g. the subtree merge/import commit)
 	#
-	# If you have overlapping history between plugins, tags could be reachable
-	# from multiple branches -> you'll get multiple prefixed copies, which is
-	# usually fine (and sometimes desirable).
-	while IFS= read -r t; do
-		[ -n "$t" ] || continue
+	# - If C is directly on main already, return C
+	# - Otherwise, return the first commit on main after C becomes reachable
+	local c="$1"
 
-		# Skip already-prefixed tags (avoid infinite growth)
-		case "$t" in
-		"$plugin/"*) continue ;;
-		esac
+	if git merge-base --is-ancestor "$c" main 2>/dev/null; then
+		printf '%s\n' "$c"
+		return 0
+	fi
 
-		local dst
-		dst="$t"
+	# If C is not reachable from main, there is nothing to retarget to
+	# (this can happen if subtree import hasn't happened yet)
+	return 1
+}
 
-		if tag_exists "$dst"; then
-			continue
-		fi
+retarget_one_tag_to_main() {
+	local tag="$1"
 
-		if tag_is_reachable_from_branch "$t" "$branch"; then
-			create_prefixed_tag "$dst" "$t"
-			log "    tagged: $dst"
-		fi
-	done < <(git tag -l)
+	local old_c new_c
+	old_c="$(tag_commit "$tag")"
+
+	if ! git merge-base --is-ancestor "$old_c" main 2>/dev/null; then
+		log "    skip tag (not reachable from main): $tag"
+		return 0
+	fi
+
+	# If it's reachable, we can retarget.
+	# If you want the *import commit* instead of the original commit ID, use this:
+	#
+	# new_c = first commit on main along ancestry-path old_c..main
+	#
+	# If old_c itself is on main, keep it as-is.
+	local maybe_import
+	maybe_import="$(git rev-list --reverse --ancestry-path "${old_c}..main" | head -n 1 || true)"
+
+	if [ -n "$maybe_import" ]; then
+		new_c="$maybe_import"
+	else
+		new_c="$old_c"
+	fi
+
+	if [ "$new_c" = "$old_c" ]; then
+		log "    tag ok (already main-reachable): $tag"
+		return 0
+	fi
+
+	log "    move tag: $tag"
+	log "      from: $old_c"
+	log "        to: $new_c"
+
+	git tag -fa "$tag" "$new_c" -m "$tag"
+}
+
+retarget_plugin_tags_to_main() {
+	local plugin="$1"
+
+	local found=0
+	while IFS= read -r tag; do
+		[ -n "$tag" ] || continue
+		found=1
+		retarget_one_tag_to_main "$tag"
+	done < <(list_prefixed_tags_for_plugin "$plugin")
+
+	if [ "$found" -eq 0 ]; then
+		log "    (no tags found for $plugin/*)"
+	fi
 }
 
 # --- per-plugin migration ----------------------------------------------------
@@ -201,7 +219,10 @@ migrate_one_plugin_branch() {
 	log "    branch: $branch"
 
 	subtree_add_plugin "$plugin" "$branch"
-	migrate_tags_for_plugin_branch "$plugin" "$branch"
+
+	# After subtree import, main should contain the old commits,
+	# so we can now retarget the plugin's prefixed tags.
+	retarget_plugin_tags_to_main "$plugin"
 
 	log ""
 }
@@ -225,7 +246,10 @@ main() {
 	log "Done. Migrated $count plugin branch(es)."
 	log "Next:"
 	log "  git push origin main"
-	log "  git push origin --tags"
+	log "  git push --force origin --tags"
+	log ""
+	log "If others already fetched old tags, they may need:"
+	log "  git fetch --tags --force"
 }
 
 main "$@"
