@@ -34,7 +34,7 @@ You will need to add a symlink to the plugin:
 
 ```sh
 cd "${ZSH_CUSTOM:-$HOME/custom}/plugins"
-ln -s "${ZSH:-$HOME/.oh-my-zsh}/remino-omz-plugin/<PLUGIN_NAME>"
+ln -s "${ZSH:-$HOME/.oh-my-zsh}/remino-omz-plugin/plugins/<PLUGIN_NAME>"
 ```
 
 Then add it in the list of plugins of the Zsh config:
