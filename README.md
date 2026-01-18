@@ -25,7 +25,7 @@ branch.
 ```sh
 git clone https://github.com/remino/omz-plugin remino-omz-plugin
 cd remino-omz-plugin
-git branch | grep -F / | sed -E 's/\/.*//' | sort | uniq
+git branch | grep -F / | grep -v template | sed -E 's/\/.*//' | sort | uniq
 ```
 
 ### Change to branch for plugin
