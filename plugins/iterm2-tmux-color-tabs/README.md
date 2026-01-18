@@ -1,5 +1,4 @@
-iterm2-tmux-color-tabs
-======================
+# iterm2-tmux-color-tabs
 
 ![Colourful tabs](tabs.png)
 
@@ -7,25 +6,15 @@ Plugin for Oh My Zsh to make your iTerm2 tmux tabs colourful.
 
 ## Installation
 
-First, clone the repo:
+See repo's main `README`.
 
-```sh
-git clone https://github.com/remino/omz-plugin-iterm2-tmux-color-tabs.git "$ZSH_CUSTOM/plugins/iterm2-tmux-color-tabs"
-```
-
-Second, add `iterm2-tmux-color-tabs` to your Oh My Zsh plugins:
-
-```
-plugins+=(iterm2-tmux-color-tabs)
-```
-
-Last, restart your shell.
-
-Every subsequent tmux tab opened in iTerm2 will have the next colour from the default or specified palette.
+When done, every subsequent tmux tab opened in iTerm2 will have the next colour
+from the default or specified palette.
 
 ## Custom Palette
 
-You can customize the color palette by setting the `ITERM2_TMUX_COLOR_TABS` environment variable.
+You can customize the color palette by setting the `ITERM2_TMUX_COLOR_TABS`
+environment variable.
 
 ### Default
 
@@ -62,4 +51,3 @@ ITERM2_TMUX_COLOR_TABS_PALETTE=(
 	"76 201 240"
 )
 ```
-

@@ -1,27 +1,17 @@
-git-aliases
-===========
+# git-aliases
 
-Plugin for Oh My Zsh to alias git aliases to g*.
+Plugin for Oh My Zsh to alias git aliases to g\*.
 
-For example, if `git pl` is aliased to `git pull`, it will also be aliased as `gpl` in the shell.
+For example, if `git pl` is aliased to `git pull`, it will also be aliased as
+`gpl` in the shell.
 
 This will also alias `g` to `git`.
 
 ## Installation
 
-First, clone the repo:
+See repo's main `README`.
 
-```sh
-git clone https://github.com/remino/omz-plugin-git-aliases.git "$ZSH_CUSTOM/plugins/git-aliases"
-```
-
-Second, add `git-aliases` to your Oh My Zsh plugins:
-
-```
-plugins+=(git-aliases)
-```
-
-Last, restart your shell.
+## Aliases
 
 You can list your git aliases using the following:
 

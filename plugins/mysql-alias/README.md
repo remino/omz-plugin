@@ -1,5 +1,4 @@
-omz-plugin-mysql-alias
-======================
+# omz-plugin-mysql-alias
 
 Plugin for Oh My Zsh to add alias for MySQL with login path.
 
@@ -15,16 +14,4 @@ mysql --login-path=production -D main
 
 ## Installation
 
-First, clone the repo:
-
-```sh
-git clone https://github.com/remino/omz-plugin-mysql-alias.git "$ZSH_CUSTOM/plugins/mysql-alias"
-```
-
-Second, add `mysql-alias` to your Oh My Zsh plugins:
-
-```
-plugins+=(mysql-alias)
-```
-
-Finally, restart your shell.
+See repo's main `README`.
