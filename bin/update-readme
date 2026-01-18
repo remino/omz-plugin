@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+
+update_readme_main() {
+	set -euo pipefail # -x
+
+	E_ARGS=16
+	E_CD_FAILED=17
+	E_NOT_GIT=18
+
+	[ ! -e .git ] && echo "Not top of git worktree." >&2 && return $E_NOT_GIT
+
+	rm -fr .* *
+
+	repo_name="$(dirname "$PWD")"
+	plugin_name="${repo_name#omz-plugin-}"
+
+	echo "# $plugin_name\n\nMigrated as $($plugin_name/*) branches in [_omz-plugin_](https://github.com/remino/omz-plugin/tree/$plugin_name)." >README.md
+
+	git commit -a -m "Migrate to omz-plugin repo:\n\nhttps://github.com/remino/omz-plugin/tree/$plugin_name"
+}
+
+update_readme_main "$@"

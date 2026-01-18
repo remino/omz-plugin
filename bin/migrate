@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+
+migrate_main() {
+	export PS4='+ ${BASH_SOURCE}:${LINENO}:${FUNCNAME[0]}() '
+	set -x
+
+	set -euo pipefail
+
+	E_ARGS=16
+	E_CD_FAILED=17
+	E_MISSING_FILE=18
+
+	[ $# -lt 1 ] && echo "USAGE: $0 <omz-plugin-repos-dir>" && return
+
+	omz_plugin_repos_dir="$1"
+
+	[ ! -d "$omz_plugin_repos_dir" ] && echo "Not found or not a directory: $omz_plugin_repos_dir" >&2 && return $E_MISSING_FILE
+
+	for repo in "$omz_plugin_repos_dir/omz-plugin-"*; do
+		echo "$repo"
+		[ -e "$repo/.git" ] || continue
+		name="$(basename "$repo")"
+		plugin_prefix="${name#omz-plugin-}"
+		git remote add "$plugin_prefix" "$repo"
+		git fetch --no-tags "$plugin_prefix"
+		# git fetch --tags "$plugin_prefix"
+		# without switching branches, set up local branch <pluginname>/<branchname> to track every branch of every remote
+		git ls-remote --heads "$plugin_prefix" | awk '{print $2}' | sed 's#refs/heads/##' | while read -r branch; do
+			echo "branch $branch"
+			git branch --track "$plugin_prefix/$branch" "$plugin_prefix/$branch"
+		done
+		# migrate every tag of every remote into main with <pluginname>/ prefix
+		# note: this will create a lot of tags in main, but that's okay
+		git ls-remote --tags "$plugin_prefix" | sed 's#refs/tags/##' | while read -r hash tag; do
+			echo "tag $tag"
+			git tag -a "$plugin_prefix/$tag" -m "$(git for-each-ref refs/tags/$plugin_prefix/$tag --format='%(contents)')" "$hash"
+		done
+		# clean up
+		git remote remove "$plugin_prefix"
+		# git checkout main
+	done
+}
+
+migrate_main "$@"
