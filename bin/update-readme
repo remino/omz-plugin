@@ -26,13 +26,13 @@ update_readme_main() {
 	cat <<OUT >README.md
 # $plugin_name
 
-Migrated as \`$plugin_name/*\` branches in [_omz-plugin_](https://github.com/remino/omz-plugin/tree/$plugin_name/main)
+Migrated in [$(plugins/$plugin_name)](https://github.com/remino/omz-plugin/tree/main/plugins/$plugin_name) directory of [_omz-plugin_](https://github.com/remino/omz-plugin).
 OUT
 
 	cat <<OUT | git commit -a -F -
-Migrate to omz-plugin repo:
+Update path in README
 
-https://github.com/remino/omz-plugin/tree/$plugin_name/main
+https://github.com/remino/omz-plugin/tree/main/plugins/$plugin_name
 OUT
 }
 
