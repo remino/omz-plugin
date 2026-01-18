@@ -1,0 +1,4 @@
+#!/usr/bin/env zsh
+# vi:ft=zsh
+
+echo "$*"
