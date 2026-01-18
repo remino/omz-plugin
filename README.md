@@ -23,7 +23,7 @@ special area to link them later:
 
 ```sh
 cd "${ZSH:-$HOME/.oh-my-zsh}"
-git clone https://github.com/remino/omz-plugin remino-omz-plugin
+git clone --recurse-submodules https://github.com/remino/omz-plugin remino-omz-plugin
 ```
 
 Note: The paths mentioned above are suggestions and used in the examples below.
