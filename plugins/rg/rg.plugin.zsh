@@ -1,1 +1,1 @@
-alias rga="rg --hidden --no-ignore"
+alias rga="rg --follow --hidden --no-ignore"
