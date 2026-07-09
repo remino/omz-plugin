@@ -10,10 +10,9 @@ _imgmod_plugin_setup() {
 		${REMUTILS_DIR:-}
 		"$HOME/opt/remutils"
 		"$HOME/Sites/remino/remutils"
-		"/opt/homebrew/opt/remutils"
-		"/opt/homebrew/share/remutils"
-		"/usr/local/opt/remutils"
-		"/usr/local/share/remutils"
+		"/opt/remutils"
+		"/opt/homebrew/opt/imgmod"
+		"/usr/local/opt/imgmod"
 	)
 
 	for root in "${remutils_roots[@]}"; do
@@ -22,6 +21,8 @@ _imgmod_plugin_setup() {
 		completion_files=(
 			"$root/completions/zsh/_imgmod"
 			"$root/imgmod/completions/zsh/_imgmod"
+			"$root/libexec/completions/zsh/_imgmod"
+			"$root/share/zsh/site-functions/_imgmod"
 		)
 
 		for completion_file in "${completion_files[@]}"; do

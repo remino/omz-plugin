@@ -10,10 +10,9 @@ _vidmod_plugin_setup() {
 		${REMUTILS_DIR:-}
 		"$HOME/opt/remutils"
 		"$HOME/Sites/remino/remutils"
-		"/opt/homebrew/opt/remutils"
-		"/opt/homebrew/share/remutils"
-		"/usr/local/opt/remutils"
-		"/usr/local/share/remutils"
+		"/opt/remutils"
+		"/opt/homebrew/opt/vidmod"
+		"/usr/local/opt/vidmod"
 	)
 
 	for root in "${remutils_roots[@]}"; do
@@ -22,6 +21,8 @@ _vidmod_plugin_setup() {
 		completion_files=(
 			"$root/completions/zsh/_vidmod"
 			"$root/vidmod/completions/zsh/_vidmod"
+			"$root/libexec/completions/zsh/_vidmod"
+			"$root/share/zsh/site-functions/_vidmod"
 		)
 
 		for completion_file in "${completion_files[@]}"; do
