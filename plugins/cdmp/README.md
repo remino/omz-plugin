@@ -1,11 +1,14 @@
 # omz-plugin-cdmp
 
-The `cdmp` plugin runs `mkprj` with the supplied arguments, then changes to the
-directory printed by that command.
+An Oh My Zsh plugin that runs [`mkprj`](https://github.com/remino/mkprj) and
+changes to the directory it prints. It also provides the shorter `mp` alias.
 
 ## Installation
 
 See the repository's main `README`.
+
+`mkprj` must be installed and available in `PATH` before Oh My Zsh loads this
+plugin.
 
 ## Usage
 
@@ -15,19 +18,12 @@ Add `cdmp` to your Oh My Zsh plugins:
 plugins=(... cdmp)
 ```
 
-Then use it just as you would use `mkprj`:
+Then use it as you would use `mkprj`:
 
 ```zsh
 cdmp my-project
+mp my-project
 ```
 
-This is equivalent to running:
-
-```zsh
-cd "$(mkprj my-project)"
-```
-
-`cdmp` only changes the current directory when `mkprj` succeeds and prints an
-existing directory. If `mkprj` fails, prints nothing, or prints a path that is
-not a directory, `cdmp` returns a nonzero status and leaves the current
-directory unchanged.
+`cdmp` leaves the current directory unchanged when `mkprj` fails, prints
+nothing, or prints a path that is not a directory.
