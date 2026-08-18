@@ -56,6 +56,7 @@ _remino_tmux_init() {
 	_remino_tmux_directory_session() {
 		local dir="${PWD##*/}"
 		local md5="$( printf '%s' "$PWD" | md5sum | cut -d ' ' -f 1 )"
+		dir="${dir//./-}"
 		local session_name="${dir}-${md5:0:6}"
 
 		_remino_tmux_create_or_switch "$session_name"
