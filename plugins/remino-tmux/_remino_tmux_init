@@ -2,10 +2,10 @@
 # vi:ft=zsh
 
 # Create or switch to tmux sessions without nesting a second client.
-remino-tmux() {
-	(( $+functions[_tmux_create_or_switch] )) && return
+_remino_tmux_init() {
+	(( $+functions[_remino_tmux_create_or_switch] )) && return
 
-	_tmux_create_or_switch() {
+	_remino_tmux_create_or_switch() {
 		local session_name=$1
 
 		if [[ -z "$TMUX" ]]
@@ -22,7 +22,7 @@ remino-tmux() {
 		command tmux switch-client -t "=$session_name"
 	}
 
-	_tmux_new_and_switch() {
+	_remino_tmux_new_and_switch() {
 		local session_name
 
 		if [[ -z "$TMUX" ]]
@@ -38,33 +38,33 @@ remino-tmux() {
 	to() {
 		if [[ -n "$1" && "${1:0:1}" != '-' ]]
 		then
-			_tmux_create_or_switch "$1"
+			_remino_tmux_create_or_switch "$1"
 		else
-			_tmux_new_and_switch "$@"
+			_remino_tmux_new_and_switch "$@"
 		fi
 	}
 
 	ts() {
 		if [[ -n "$1" && "${1:0:1}" != '-' ]]
 		then
-			_tmux_new_and_switch -s "$@"
+			_remino_tmux_new_and_switch -s "$@"
 		else
-			_tmux_new_and_switch "$@"
+			_remino_tmux_new_and_switch "$@"
 		fi
 	}
 
-	_tmux_directory_session() {
+	_remino_tmux_directory_session() {
 		local dir="${PWD##*/}"
 		local md5="$( printf '%s' "$PWD" | md5sum | cut -d ' ' -f 1 )"
 		local session_name="${dir}-${md5:0:6}"
 
-		_tmux_create_or_switch "$session_name"
+		_remino_tmux_create_or_switch "$session_name"
 	}
 
 	if (( $+aliases[tds] )); then
 		unalias tds
 	fi
-	alias tds=_tmux_directory_session
+	alias tds=_remino_tmux_directory_session
 
 	tkss() {
 		local target current
@@ -95,7 +95,7 @@ remino-tmux() {
 		command tmux kill-session "${kill_args[@]}"
 	}
 
-	_tmux_switch_on_last_shell_exit() {
+	_remino_tmux_switch_on_last_shell_exit() {
 		local session_windows window_panes
 
 		[[ -z "$TMUX" ]] && return
@@ -107,5 +107,5 @@ remino-tmux() {
 	}
 
 	autoload -Uz add-zsh-hook
-	add-zsh-hook zshexit _tmux_switch_on_last_shell_exit
+	add-zsh-hook zshexit _remino_tmux_switch_on_last_shell_exit
 }

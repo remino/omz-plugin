@@ -2,19 +2,19 @@
 
 _remino_tmux_set() {
 	fpath+=("${${(%):-%x}:A:h}")
-	autoload -Uz remino-tmux
+	autoload -Uz _remino_tmux_init
 }
 
 _remino_tmux_set
 unset -f _remino_tmux_set
 
 to() {
-	remino-tmux
+	_remino_tmux_init
 	to "$@"
 }
 
 ts() {
-	remino-tmux
+	_remino_tmux_init
 	ts "$@"
 }
 
@@ -23,11 +23,11 @@ if (( $+aliases[tds] )); then
 fi
 
 tds() {
-	remino-tmux
-	_tmux_directory_session "$@"
+	_remino_tmux_init
+	_remino_tmux_directory_session "$@"
 }
 
 tkss() {
-	remino-tmux
+	_remino_tmux_init
 	tkss "$@"
 }
