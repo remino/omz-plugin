@@ -95,4 +95,35 @@ _remino_tmux_init() {
 		command tmux kill-session "${kill_args[@]}"
 	}
 
+	tdup() {
+		local source_session target_session=$1 index=2
+
+		if [[ -z "$TMUX" ]]; then
+			print -u2 -- 'tdup: must be run inside tmux'
+			return 1
+		fi
+
+		if [[ "${target_session:0:1}" == '-' || $# -gt 1 ]]; then
+			print -u2 -- 'usage: tdup [SESSION_NAME]'
+			return 2
+		fi
+
+		source_session="$( command tmux display-message -p '#{session_name}' 2> /dev/null )" || return
+		if [[ -z "$source_session" ]]; then
+			print -u2 -- 'tdup: could not determine the current session'
+			return 1
+		fi
+
+		if [[ -z "$target_session" ]]; then
+			target_session="${source_session}-${index}"
+			while command tmux has-session -t "=$target_session" 2> /dev/null
+			do
+				(( index++ ))
+				target_session="${source_session}-${index}"
+			done
+		fi
+
+		command tmux new-session -d -t "=$source_session" -s "$target_session"
+	}
+
 }

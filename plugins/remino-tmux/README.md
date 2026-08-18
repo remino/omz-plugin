@@ -16,6 +16,7 @@ See the repository's main `README`.
 | `ts NAME` | Create a new session named `NAME`; inside tmux, switch the current client to it. Pass tmux options directly to create a session with those options. |
 | `tds` | Create or switch to a session named after the current directory, with a short hash to distinguish directories sharing a name. |
 | `tkss [NAME]` | Kill `NAME`, or the current session when no target is given. When closing the current tmux session, it first switches to the previously active session. |
+| `tdup [NAME]` | Create a grouped session with the current session's windows. With no name, the new session is numbered `<current-session>-2`, `<current-session>-3`, and so on, choosing the first unused number. The current client stays where it is, so another terminal app instance can attach to the new session and select windows independently. |
 
 For example:
 
@@ -24,6 +25,8 @@ to work
 ts scratch
 tds
 tkss scratch
+tdup
+tdup other-terminal
 ```
 
 When the last shell in a tmux session exits, the plugin switches the client to

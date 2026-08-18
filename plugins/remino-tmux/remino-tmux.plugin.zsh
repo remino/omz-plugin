@@ -45,3 +45,8 @@ tkss() {
 	_remino_tmux_init
 	tkss "$@"
 }
+
+tdup() {
+	_remino_tmux_init
+	tdup "$@"
+}
