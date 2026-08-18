@@ -61,7 +61,9 @@ remino-tmux() {
 		_tmux_create_or_switch "$session_name"
 	}
 
-	unalias tds 2> /dev/null || true
+	if (( $+aliases[tds] )); then
+		unalias tds
+	fi
 	alias tds=_tmux_directory_session
 
 	tkss() {

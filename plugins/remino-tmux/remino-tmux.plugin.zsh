@@ -18,6 +18,10 @@ ts() {
 	ts "$@"
 }
 
+if (( $+aliases[tds] )); then
+	unalias tds
+fi
+
 tds() {
 	remino-tmux
 	_tmux_directory_session "$@"
